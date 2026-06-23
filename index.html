@@ -145,7 +145,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue"
     </div>
   </div>
   <div class="course-banner" id="course-banner">
-    <h3>📡 直播课日程 · 跟课学习</h3>
+    <h3>📅 学习路线图 · 贴进度走</h3>
     <div id="course-schedule-items"></div>
   </div>
   <div class="stat-row">
@@ -361,11 +361,12 @@ function renderDash(){
   var schedule=COURSE_DATA.meta.courseSchedule||[];
   schedule.forEach(function(cs){
     var isToday=cs.isToday;
+    var typeLabel=cs.type||'';
     bannerHtml+='<div class="course-item'+(isToday?' today':'')+'">';
     bannerHtml+='<span class="course-date">'+cs.date+' '+cs.weekday+'</span>';
-    bannerHtml+='<span class="course-topic">'+cs.chapter+'：'+cs.topic+'</span>';
-    bannerHtml+='<span class="course-days">对应 Day '+cs.days.join('、Day ')+'</span>';
-    if(isToday) bannerHtml+='<span style="font-size:10px;background:#F59E0B;color:#fff;padding:1px 6px;border-radius:8px">今晚</span>';
+    bannerHtml+='<span class="course-topic">'+cs.topic+'</span>';
+    bannerHtml+='<span class="course-days">'+cs.h5days+'</span>';
+    if(typeLabel) bannerHtml+='<span style="font-size:10px;background:'+(isToday?'#F59E0B':'rgba(255,255,255,.2)')+';color:#fff;padding:1px 6px;border-radius:8px;margin-left:4px">'+typeLabel+'</span>';
     bannerHtml+='</div>';
   });
   document.getElementById('course-schedule-items').innerHTML=bannerHtml;
@@ -384,6 +385,8 @@ function goToToday(){
 function renderDays(){
   var html='';
   var allLocked=false;
+  var now=new Date();
+  var todayStr=(now.getMonth()+1)+'月'+now.getDate()+'日';
   for(var i=1;i<=10;i++){
     var data=null;
     if(window.COURSE_DATA&&COURSE_DATA.days) data=COURSE_DATA.days[i-1];
@@ -404,7 +407,7 @@ function renderDays(){
 
     html+='<div class="day-item" onclick="goPage(\'detail\','+i+')" style="'+(comp?'opacity:.7':'')+'">';
     html+='<div class="day-num '+cls+'">'+(comp?'✓':i)+'</div>';
-    html+='<div class="day-info"><h4>'+title+(data&&data.courseDate?' <span class="course-date-badge'+(data.courseDate.indexOf('6月23日')>=0?' today-badge':'')+'">'+data.courseDate+'</span>':'')+'</h4><p>'+(data?(data.tags||[]).join(' · '):'')+'</p></div>';
+    html+='<div class="day-info"><h4>'+title+(data&&data.courseDate?' <span class="course-date-badge'+(data.courseDate.indexOf(todayStr)>=0?' today-badge':'')+'">'+data.courseDate+'</span>':'')+'</h4><p>'+(data?(data.tags||[]).join(' · '):'')+'</p></div>';
     html+='<div class="day-status">'+statusText+'</div>';
     html+='</div>';
   }

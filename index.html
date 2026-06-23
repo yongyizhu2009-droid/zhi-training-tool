@@ -101,6 +101,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue"
 .modal{background:var(--card);border-radius:16px;padding:24px;width:90%;max-width:400px;max-height:80vh;overflow-y:auto}
 .modal h3{margin-bottom:16px;font-size:18px}
 .coach-badge{display:inline-block;padding:4px 12px;background:var(--acc-light);color:#92400E;border-radius:20px;font-size:11px;font-weight:700;margin-left:8px}
+.course-banner{background:linear-gradient(135deg,#1E3A5F,#2563EB);border-radius:var(--radius);padding:14px;margin-bottom:12px;color:#fff}
+.course-banner h3{font-size:14px;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.course-item{display:flex;align-items:center;padding:8px 10px;border-radius:8px;margin-bottom:6px;background:rgba(255,255,255,.12);font-size:12px;gap:8px}
+.course-item.today{background:rgba(245,158,11,.35);border:1px solid rgba(245,158,11,.5)}
+.course-date{font-weight:700;min-width:56px;white-space:nowrap}
+.course-topic{flex:1;font-weight:500}
+.course-days{font-size:10px;opacity:.8;white-space:nowrap}
+.course-date-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;background:#FEF3C7;color:#92400E;margin-left:6px;vertical-align:middle}
+.course-date-badge.today-badge{background:#FEE2E2;color:#991B1B;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
 </style>
 </head>
 <body>
@@ -133,6 +143,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue"
       </div>
       <div style="font-size:48px">🎯</div>
     </div>
+  </div>
+  <div class="course-banner" id="course-banner">
+    <h3>📡 直播课日程 · 跟课学习</h3>
+    <div id="course-schedule-items"></div>
   </div>
   <div class="stat-row">
     <div class="stat-card"><div class="stat-num" id="dash-days">0</div><div class="stat-label">已完成天数</div></div>
@@ -341,6 +355,20 @@ function renderDash(){
   var prog=dayProgress(currentDay);
   document.getElementById('today-progress').style.width=prog.pct+'%';
   document.getElementById('today-status').textContent='已完成 '+prog.done+'/3 项任务';
+
+  // Render course schedule banner
+  var bannerHtml='';
+  var schedule=COURSE_DATA.meta.courseSchedule||[];
+  schedule.forEach(function(cs){
+    var isToday=cs.isToday;
+    bannerHtml+='<div class="course-item'+(isToday?' today':'')+'">';
+    bannerHtml+='<span class="course-date">'+cs.date+' '+cs.weekday+'</span>';
+    bannerHtml+='<span class="course-topic">'+cs.chapter+'：'+cs.topic+'</span>';
+    bannerHtml+='<span class="course-days">对应 Day '+cs.days.join('、Day ')+'</span>';
+    if(isToday) bannerHtml+='<span style="font-size:10px;background:#F59E0B;color:#fff;padding:1px 6px;border-radius:8px">今晚</span>';
+    bannerHtml+='</div>';
+  });
+  document.getElementById('course-schedule-items').innerHTML=bannerHtml;
 }
 
 function goToToday(){
@@ -376,7 +404,7 @@ function renderDays(){
 
     html+='<div class="day-item" onclick="goPage(\'detail\','+i+')" style="'+(comp?'opacity:.7':'')+'">';
     html+='<div class="day-num '+cls+'">'+(comp?'✓':i)+'</div>';
-    html+='<div class="day-info"><h4>'+title+'</h4><p>'+(data?(data.tags||[]).join(' · '):'')+'</p></div>';
+    html+='<div class="day-info"><h4>'+title+(data&&data.courseDate?' <span class="course-date-badge'+(data.courseDate.indexOf('6月23日')>=0?' today-badge':'')+'">'+data.courseDate+'</span>':'')+'</h4><p>'+(data?(data.tags||[]).join(' · '):'')+'</p></div>';
     html+='<div class="day-status">'+statusText+'</div>';
     html+='</div>';
   }

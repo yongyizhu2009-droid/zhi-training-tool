@@ -111,6 +111,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue"
 .course-date-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;background:#FEF3C7;color:#92400E;margin-left:6px;vertical-align:middle}
 .course-date-badge.today-badge{background:#FEE2E2;color:#991B1B;animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+/* Short Answer styles */
+.sa-textarea{width:100%;min-height:120px;padding:12px;border:2px solid #E5E7EB;border-radius:var(--radius);font-size:14px;resize:vertical;outline:none;line-height:1.6;font-family:inherit}
+.sa-textarea:focus{border-color:var(--pri)}
+.sa-compare{display:flex;gap:12px;margin-top:12px;flex-direction:column}
+.sa-card{border-radius:var(--radius);padding:14px;font-size:13px;line-height:1.6}
+.sa-card.ref{background:#F0FDF4;border:1px solid #BBF7D0}
+.sa-card.user{background:#EFF6FF;border:1px solid #BFDBFE}
+.sa-card h5{font-size:12px;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:4px}
+.sa-keywords{margin-top:8px;display:flex;flex-wrap:wrap;gap:4px}
+.sa-kw{margin:2px;padding:2px 8px;border-radius:10px;font-size:11px;background:#FEF3C7;color:#92400E}
+.sa-kw.hit{background:#D1FAE5;color:#065F46}
+.sa-kw.miss{background:#FEE2E2;color:#991B1B}
+.sa-self-eval{display:flex;gap:8px;margin-top:12px}
+.sa-score{font-size:13px;color:var(--text2);margin-top:4px}
 </style>
 </head>
 <body>
@@ -542,7 +556,7 @@ function showDayTab(dayId,tab){
       // Question number + progress bar
       var answeredCount=Object.keys(d.testAnswers).length;
       html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
-      html+='<span style="font-size:12px;color:var(--text3)">第 <b style="color:var(--pri)">'+(qIdx+1)+'</b>/'+totalQ+' 题 · '+(qType==='multi'?'多选':qType==='judge'?'判断':'单选')+'</span>';
+      html+='<span style="font-size:12px;color:var(--text3)">第 <b style="color:var(--pri)">'+(qIdx+1)+'</b>/'+totalQ+' 题 · '+(qType==='multi'?'多选':qType==='judge'?'判断':qType==='shortAnswer'?'简答':'单选')+'</span>';
       html+='<span style="font-size:12px;color:var(--text3)">已答 '+answeredCount+'/'+totalQ+'</span>';
       html+='</div>';
       html+='<div class="progress-bar" style="margin-bottom:12px"><div class="progress-fill" style="width:'+Math.round(answeredCount/totalQ*100)+'%"></div></div>';
@@ -550,11 +564,22 @@ function showDayTab(dayId,tab){
       // All done - show score summary
       if(allDone){
         var correctCount=0;
+        var saCount=0, saPassedCount=0;
         for(var k in d.testAnswers){
           var aq=tests[parseInt(k)];
           var isMulti=aq.type==='multi';
+          var isSA=aq.type==='shortAnswer';
           var userAns=d.testAnswers[parseInt(k)];
-          if(isMulti){
+          if(isSA){
+            saCount++;
+            // Check keyword match rate (60% threshold)
+            var saKws=aq.scoringPoints||[];
+            if(saKws.length>0){
+              var saHits=0;
+              saKws.forEach(function(kw){if((userAns||'').indexOf(kw)>=0) saHits++;});
+              if(saHits/saKws.length>=0.6) saPassedCount++;
+            }
+          }else if(isMulti){
             var correctAns=aq.correct;
             if(Array.isArray(correctAns)&&Array.isArray(userAns)){
               if(correctAns.length===userAns.length&&correctAns.every(function(v){return userAns.indexOf(v)>=0})){
@@ -565,14 +590,15 @@ function showDayTab(dayId,tab){
             if(userAns===aq.correct) correctCount++;
           }
         }
-        d.testScore=correctCount;
-        d.testPassed=correctCount>=Math.ceil(totalQ*0.7);
+        var totalScore=correctCount+saPassedCount;
+        d.testScore=totalScore;
+        d.testPassed=totalScore>=Math.ceil(totalQ*0.7);
         d.testDone=true;
         saveState(S);
         html+='<div style="text-align:center;padding:16px 0">';
-        html+='<div style="font-size:48px;font-weight:700;color:'+(d.testPassed?'var(--ok)':'var(--err)')+'">'+correctCount+'/'+totalQ+'</div>';
-        html+='<p style="font-size:14px;margin:8px 0;color:'+(d.testPassed?'var(--ok)':'var(--err)')+'">'+(d.testPassed?'🎉 恭喜通过！':'📚 继续加油！')+'</p>';
-        html+='<p style="font-size:12px;color:var(--text3)">正确率 '+(totalQ>0?Math.round(correctCount/totalQ*100):0)+'%</p>';
+        html+='<div style="font-size:48px;font-weight:700;color:'+(d.testPassed?'var(--succ)':'var(--danger)')+'">'+totalScore+'/'+totalQ+'</div>';
+        html+='<p style="font-size:14px;margin:8px 0;color:'+(d.testPassed?'var(--succ)':'var(--danger)')+'">'+(d.testPassed?'🎉 恭喜通过！':'📚 继续加油！')+'</p>';
+        html+='<p style="font-size:12px;color:var(--text3)">正确率 '+(totalQ>0?Math.round(totalScore/totalQ*100):0)+'%'+(saCount>0?'（含 '+saCount+' 道简答题）':'')+'</p>';
         html+='<div style="margin-top:12px">';
         html+='<button class="btn btn-pri" onclick="reviewTest('+dayId+')">🔍 逐题查看</button>';
         html+='<button class="btn btn-outline" style="margin-left:8px" onclick="retryTest('+dayId+')">🔄 重新作答</button>';
@@ -581,6 +607,80 @@ function showDayTab(dayId,tab){
       }else{
         // Show current question
         html+='<p style="font-weight:600;margin-bottom:12px">📝 '+t(q.question)+'</p>';
+
+        // --- Short Answer handling ---
+        if(qType==='shortAnswer'){
+          if(!currentDone){
+            html+='<textarea class="sa-textarea" id="sa-input-'+dayId+'" placeholder="请输入你的答案（按教材和课堂内容作答）..."></textarea>';
+            html+='<button class="btn btn-pri btn-full" style="margin-top:8px" onclick="submitShortAnswer('+dayId+','+qIdx+')">📝 提交答案</button>';
+            html+='<p style="font-size:11px;color:var(--text3);margin-top:6px">提示：尽量包含关键词，提交后将显示参考答案对比</p>';
+          } else {
+            var userAnsText=d.testAnswers[qIdx]||'';
+            // Calculate keyword hit rate
+            var scoringPoints=q.scoringPoints||[];
+            var totalKws=scoringPoints.length;
+            var hitKws=0;
+            if(totalKws>0){
+              scoringPoints.forEach(function(kw){
+                if(userAnsText.indexOf(kw)>=0) hitKws++;
+              });
+            }
+            var kwRate=totalKws>0?Math.round(hitKws/totalKws*100):0;
+            var passed=kwRate>=60;
+            // Store keyword score
+            d._saKwScore=kwRate;
+            d._saPassed=passed;
+            saveState(S);
+
+            html+='<div class="sa-compare">';
+            // Reference answer
+            html+='<div class="sa-card ref">';
+            html+='<h5>📖 参考答案</h5>';
+            html+='<p>'+t(q.referenceAnswer).replace(/\n/g,'<br>')+'</p>';
+            html+='</div>';
+            // User answer
+            html+='<div class="sa-card user">';
+            html+='<h5>✏️ 我的答案</h5>';
+            html+='<p>'+userAnsText.replace(/\n/g,'<br>')+'</p>';
+            html+='</div>';
+            html+='</div>';
+
+            // Keyword scoring
+            if(totalKws>0){
+              html+='<div style="margin-top:10px;font-size:12px;color:var(--text2)">';
+              html+='<b>🎯 关键词命中：</b><span style="color:'+(passed?'var(--succ)':'var(--danger)')+';font-weight:700">'+hitKws+'/'+totalKws+'（'+kwRate+'%）</span>';
+              html+='<div class="sa-keywords">';
+              scoringPoints.forEach(function(kw){
+                var hit=userAnsText.indexOf(kw)>=0;
+                html+='<span class="sa-kw '+(hit?'hit':'miss')+'">'+(hit?'✅ ':'❌ ')+kw+'</span>';
+              });
+              html+='</div></div>';
+            }
+
+            // Self evaluation
+            html+='<div class="sa-self-eval">';
+            html+='<button class="btn btn-sm '+(d._saSelfEval==='good'?'btn-pri':'btn-outline')+'" onclick="selfEvalSA('+dayId+','+qIdx+',\'good\')">👍 已掌握</button>';
+            html+='<button class="btn btn-sm '+(d._saSelfEval==='review'?'btn-pri':'btn-outline')+'" style="border-color:var(--acc);color:var(--acc)" onclick="selfEvalSA('+dayId+','+qIdx+',\'review\')">🔄 需复习</button>';
+            html+='</div>';
+
+            // Explanation if exists
+            if(q.explanation){
+              html+='<div class="quiz-feedback '+(passed?'correct':'wrong')+'" style="margin-top:8px">';
+              html+=(passed?'✅ 关键词达标':'📚 关键词不足，再看看解析');
+              html+='<p style="margin-top:4px;font-size:13px">'+t(q.explanation)+'</p>';
+              html+='</div>';
+            }
+
+            // Next question or finish
+            if(qIdx+1<totalQ){
+              html+='<button class="btn btn-pri btn-full" style="margin-top:8px" onclick="nextTestQ('+dayId+','+(qIdx+1)+')">▶ 下一题</button>';
+            }else{
+              html+='<button class="btn btn-pri btn-full" style="margin-top:8px" onclick="finishTest('+dayId+')">📊 查看成绩</button>';
+            }
+          }
+        }
+        // --- End Short Answer ---
+        else {
         html+='<div id="quiz-options-'+dayId+'">';
         if(q.options){
           q.options.forEach(function(opt,i){
@@ -643,6 +743,7 @@ function showDayTab(dayId,tab){
             html+='<button class="btn btn-pri btn-full" style="margin-top:8px" onclick="finishTest('+dayId+')">📊 查看成绩</button>';
           }
         }
+        } // close inner else (non-shortAnswer)
       }
       html+='</div>';
     }
@@ -834,6 +935,46 @@ function retryTest(dayId){
 function reviewTest(dayId){
   S.days[dayId].testQIdx=0;
   saveState(S);
+  renderDetail(dayId);
+  showDayTab(dayId,'test');
+}
+
+// ====== SHORT ANSWER ======
+function submitShortAnswer(dayId,qIdx){
+  var input=document.getElementById('sa-input-'+dayId);
+  if(!input){return;}
+  var text=input.value.trim();
+  if(!text){showToast('请输入你的答案再提交');return;}
+  S.days[dayId].testAnswers[qIdx]=text;
+  saveState(S);
+  renderDetail(dayId);
+  showDayTab(dayId,'test');
+}
+function selfEvalSA(dayId,qIdx,level){
+  S.days[dayId]._saSelfEval=level;
+  // If marked as 'good', clear from error book
+  if(level==='good'){
+    S.errors=S.errors.filter(function(e){return !(e.dayId===dayId&&e.qIdx===qIdx);});
+  }else{
+    // Add to error book if not already there
+    var data=COURSE_DATA.days[dayId-1];
+    var tests=data.tests||[];
+    var q=tests[qIdx];
+    var exists=S.errors.find(function(e){return e.dayId===dayId&&e.qIdx===qIdx;});
+    if(!exists){
+      S.errors.push({
+        dayId:dayId,qIdx:qIdx,question:q.question||'',
+        userAnswer:S.days[dayId].testAnswers[qIdx]||'',
+        correctAnswer:q.referenceAnswer||'',
+        explanation:q.explanation||'',
+        category:q.category||'theory',
+        type:'shortAnswer',multi:false,
+        time:new Date().toISOString()
+      });
+    }
+  }
+  saveState(S);
+  showToast(level==='good'?'已标记为掌握！':'已加入错题本复习');
   renderDetail(dayId);
   showDayTab(dayId,'test');
 }

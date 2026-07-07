@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>职业培训师三级 · 10天通关 v802</title>
+<title>职业培训师三级 · 10天通关 v803</title>
 <style>
 :root {
   --pri: #2563EB; --pri-light: #DBEAFE; --pri-dark: #1D4ED8;
@@ -139,13 +139,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue"
     <div style="font-size:56px;margin-bottom:16px">🧭</div>
     <h1 style="font-size:24px;font-weight:800;margin-bottom:8px">职业培训师三级</h1>
     <p style="color:var(--text2);font-size:14px">10天通关计划 · 费曼学习法</p>
-    <p style="color:var(--text3);font-size:12px;margin-top:4px">考试倒计时 <strong id="countdown">--</strong> 天</p>
+    <p style="color:var(--text3);font-size:12px;margin-top:4px">考试倒计时 <strong id="countdown">--</strong> 天 · 版本 <span id="ver-badge" style="color:var(--pri);font-weight:700">v803</span></p>
   </div>
   <div class="card" style="margin:0 16px">
     <div class="input-group"><label>手机号</label><input type="tel" id="login-phone" placeholder="输入手机号" maxlength="11"></div>
     <div class="input-group"><label>你的昵称</label><input type="text" id="login-name" placeholder="输入昵称" maxlength="10"></div>
     <button class="btn btn-pri btn-full" onclick="doLogin()">开始学习</button>
-    <p style="font-size:11px;color:var(--text3);text-align:center;margin-top:12px">数据仅保存在本地，教练端可查看学习记录</p>
+    <p id="login-debug" style="font-size:11px;color:var(--text3);text-align:center;margin-top:12px">数据仅保存在本地 · 如遇问题请清除浏览器缓存重试</p>
   </div>
 </div>
 
@@ -251,7 +251,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue"
 <!-- TOAST -->
 <div id="toast" style="display:none;position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#1F2937;color:#fff;padding:10px 24px;border-radius:20px;font-size:14px;z-index:9999"></div>
 
-<script src="course_content_data.js?v=802"></script>
+<script src="course_content_data.js?v=803"></script>
 <script>
 // ====== APP STATE ======
 const STORAGE_KEY = 'vt_trainer_v1';
@@ -322,26 +322,35 @@ function goPage(name,data){
 
 // ====== LOGIN ======
 function doLogin(){
-  var phone=document.getElementById('login-phone').value.trim();
-  var name=document.getElementById('login-name').value.trim();
-  if(!phone||phone.length!==11){showToast('请输入正确的11位手机号');return;}
-  if(!name){showToast('请输入昵称');return;}
-  S.currentPhone=phone;
-  if(!S.users[phone]){
-    S.users[phone]={phone:phone,nickname:name,avatar:name.charAt(0),createdAt:new Date().toISOString()};
-  }else{
-    S.users[phone].nickname=name;
+  try{
+    var phoneEl=document.getElementById('login-phone');
+    var nameEl=document.getElementById('login-name');
+    if(!phoneEl||!nameEl){showToast('页面加载异常，请刷新重试');return;}
+    var phone=phoneEl.value.trim();
+    var name=nameEl.value.trim();
+    if(!phone||phone.length!==11){showToast('请输入正确的11位手机号');return;}
+    if(!name){showToast('请输入昵称');return;}
+    S.currentPhone=phone;
+    if(!S.users[phone]){
+      S.users[phone]={phone:phone,nickname:name,avatar:name.charAt(0),createdAt:new Date().toISOString()};
+    }else{
+      S.users[phone].nickname=name;
+    }
+    // Update streak
+    var today=fmtDate(new Date());
+    if(S.streak.lastDate!==today){
+      var yesterday=fmtDate(new Date(Date.now()-86400000));
+      if(S.streak.lastDate===yesterday){S.streak.count++;}
+      else{S.streak.count=1;}
+      S.streak.lastDate=today;
+    }
+    saveState(S);
+    goPage('dash');
+  }catch(err){
+    showToast('登录出错: '+err.message);
+    var dbg=document.getElementById('login-debug');
+    if(dbg) dbg.textContent='错误详情: '+err.message+' | 请清除浏览器缓存后重试';
   }
-  // Update streak
-  var today=fmtDate(new Date());
-  if(S.streak.lastDate!==today){
-    var yesterday=fmtDate(new Date(Date.now()-86400000));
-    if(S.streak.lastDate===yesterday){S.streak.count++;}
-    else{S.streak.count=1;}
-    S.streak.lastDate=today;
-  }
-  saveState(S);
-  goPage('dash');
 }
 
 // ====== DAY PROGRESS HELPERS ======
@@ -1554,12 +1563,21 @@ function resetData(){
 
 // ====== INIT ======
 document.addEventListener('DOMContentLoaded',function(){
-  document.getElementById('countdown').textContent=getExamCountdown();
-  var u=getCurrentUser();
-  if(u){
-    goPage('dash');
-  }else{
+  try{
+    // 版本标识：确认JS已执行
+    var vb=document.getElementById('ver-badge');
+    if(vb) vb.style.color='#10B981'; // v803加载成功 → 绿色
+    document.getElementById('countdown').textContent=getExamCountdown();
+    var u=getCurrentUser();
+    if(u){
+      goPage('dash');
+    }else{
     goPage('login');
+  }
+  }catch(err){
+    var dbg=document.getElementById('login-debug');
+    if(dbg) dbg.textContent='初始化错误: '+err.message+' | 请清除缓存刷新';
+    showToast('页面加载出错，请刷新');
   }
 });
 
